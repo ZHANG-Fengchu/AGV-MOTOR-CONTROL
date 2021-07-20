@@ -1,284 +1,111 @@
-# This example code was originally written by Mohammad Omar, this module is builded to interface with the Driver MDD10A, to control two DC motors.
+#!/usr/bin/env python
+# coding: latin-1
+# I am Mohammad Omar, this module is builded to interface with the Driver MDD10A, to control two DC motors.
 # the original code designed by Ingmar Stapel ,www.raspberry-pi-car.com to control two motors with a L298N H-Bridge
 # The pins configuration for Model B Revision 1.0
-import sys, tty, termios, os
-
-import MDD10A as HBridge
-
-speedleft = 0
-speedright = 0
-
-# Instructions for when the user has an interface
-
-print("w/s: direction")
-
-print("a/d: steering")
-
-print("q: stops the motors")
-
-print("p: print motor speed (L/R)")
-
-print("x: exit")
-
-
-
-# The catch method can determine which key has been pressed
-
-# by the user on the keyboard.
-
-def getch():
-
-    fd = sys.stdin.fileno()
-
-    old_settings = termios.tcgetattr(fd)
-
-    try:
-
-        tty.setraw(sys.stdin.fileno())
-
-        ch = sys.stdin.read(1)
-
-   finally:
-
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
-    return ch
-
-
-
-# Infinite loop
-
-# The loop will not end until the user presses the
-
-# exit key 'X' or the program crashes...
-
-
-
-def printscreen():
-
-    # Print the motor speed just for interest
-
-    os.system('clear')
-
-    print("w/s: direction")
-
-    print("a/d: steering")
-
-    print("q: stops the motors")
-
-    print("x: exit")
-
-    print("========== Speed Control ==========")
-
-    print "left motor:  ", speedleft
-
-    print "right motor: ", speedright
-
-
-
-while True:
-
-    # Keyboard character retrieval method. This method will save
-
-    # the pressed key into the variable char
-
-    char = getch()
-
-
-   # The car will drive forward when the "w" key is pressed
-
-   if(char == "w"):
-
-
-
-       # synchronize after a turning the motor speed
-
-
-
-       # if speedleft > speedright:
-
-           # speedleft = speedright
-
-
-
-       # if speedright > speedleft:
-
-           # speedright = speedleft
-
-
-
-       # accelerate the RaPi car
-
-       speedleft = speedleft + 0.1
-
-       speedright = speedright + 0.1
-
-
-
-       if speedleft > 1:
-
-           speedleft = 1
-
-       if speedright > 1:
-
-           speedright = 1
-
-
-
-       HBridge.setMotorLeft(speedleft)
-
-       HBridge.setMotorRight(speedright)
-
-      printscreen()
-
-
-
-   # The car will reverse when the "s" key is pressed
-
-   if(char == "s"):
-
-
-
-       # synchronize after a turning the motor speed
-
-
-
-       # if speedleft > speedright:
-
-           # speedleft = speedright
-
-
-
-       # if speedright > speedleft:
-
-           # speedright = speedleft
-
-
-
-       # slow down the RaPi car
-
-       speedleft = speedleft - 0.1
-
-       speedright = speedright - 0.1
-
-
-
-       if speedleft < -1:
-           speedleft = -1
-
-       if speedright < -1:
-
-           speedright = -1
-
-
-
-       HBridge.setMotorLeft(speedleft)
-
-       HBridge.setMotorRight(speedright)
-
-       printscreen()
-
-
-
-     # Stop the motors
-
-     if(char == "q"):
-
-         speedleft = 0
-
-         speedright = 0
-
-         HBridge.setMotorLeft(speedleft)
-
-         HBridge.setMotorRight(speedright)
-
-         printscreen()
-
-
-
-     # The "d" key will toggle the steering right
-
-     if(char == "d"):
-
-         #if speedright > speedleft:
-
-         speedright = speedright - 0.1
-
-         speedleft = speedleft + 0.1
-
-
-
-         if speedright < -1:
-
-             speedright = -1
-
-
-
-         if speedleft > 1:
-
-             speedleft = 1
-
-
-
-         HBridge.setMotorLeft(speedleft)
-
-         HBridge.setMotorRight(speedright)
-
-         printscreen()
-
-
-
-     # The "a" key will toggle the steering left
-
-     if(char == "a"):
-
-         #if speedleft > speedright:
-
-         speedleft = speedleft - 0.1
-
-         speedright = speedright + 0.1
-
-
-
-         if speedleft < -1:
-
-             speedleft = -1
-
-
-
-         if speedright > 1:
-
-             speedright = 1
-
-
-
-         HBridge.setMotorLeft(speedleft)
-
-         HBridge.setMotorRight(speedright)
-
-         printscreen()
-
-
-
-     # The "x" key will break the loop and exit the program
-
-     if(char == "x"):
-
-         HBridge.setMotorLeft(0)
-
-         HBridge.setMotorRight(0)
-         HBridge.exit()
-
-         print("Program Ended")
-
-         break
-
-
-
-     # The keyboard character variable char has to be set blank. We need
-
-     # to set it blank to save the next key pressed by the user
-
-     char = ""
-
- # End
+# How to Use this module: 1- creating an instance of the class. 2- call the Init function, 3- call commands functions
+# Example:
+# import MDD10A
+# Motors = MDD10A.MDD10A()
+# Import the libraries the class needs
+import RPi.GPIO as io
+io.setmode(io.BCM)
+
+# Constant values,
+PWM_MAX                 = 100
+
+# Disable warning from GPIO
+io.setwarnings(False)
+
+# Here we configure the GPIO settings for the left and right motors spinning direction.
+# as described in the user manual of MDD10A https://www.robotshop.com/media/files/pdf/user-manual-mdd10a.pdf
+# there are four input PWM1-DIR1-PWM2-DIR2
+# WITH MAX Frequency 20 Hz, and it works as follow,
+#       Input   DIR     Output-A    Output-B
+#   PWM  off    X         off         off
+#   PWM  on     off       on          off
+#   PWM  on     on        off         on
+# The pins configuration for Model B Revision 1.0
+leftMotor_DIR_pin = 22
+io.setup(leftMotor_DIR_pin, io.OUT)
+rightMotor_DIR_pin = 23
+io.setup(rightMotor_DIR_pin, io.OUT)
+io.output(leftMotor_DIR_pin, False)
+io.output(rightMotor_DIR_pin, False)
+
+# Here we configure the GPIO settings for the left and right motors spinning speed.
+leftMotor_PWM_pin = 17
+rightMotor_PWM_pin = 18
+io.setup(leftMotor_PWM_pin, io.OUT)
+io.setup(rightMotor_PWM_pin, io.OUT)
+
+# MAX Frequency 20 Hz
+leftMotorPWM = io.PWM(leftMotor_PWM_pin,20)
+rightMotorPWM = io.PWM(rightMotor_PWM_pin,20)
+leftMotorPWM.start(0)
+leftMotorPWM.ChangeDutyCycle(0)
+rightMotorPWM.start(0)
+rightMotorPWM.ChangeDutyCycle(0)
+leftMotorPower = 0
+rightMotorPower = 0
+def getMotorPowers():
+    return (leftMotorPower,rightMotorPower)
+def setMotorLeft(power):
+# SetMotorLeft(power)
+# Sets the drive level for the left motor, from +1 (max) to -1 (min).
+# This is a short explanation for a better understanding:
+# SetMotorLeft(0)     -> left motor is stopped
+# SetMotorLeft(0.75)  -> left motor moving forward at 75% power
+# SetMotorLeft(-0.5)  -> left motor moving reverse at 50% power
+# SetMotorLeft(1)     -> left motor moving forward at 100% power
+    if power < 0:
+        # Reverse mode for the left motor
+        io.output(leftMotor_DIR_pin, False)
+        pwm = -int(PWM_MAX * power)
+        if pwm > PWM_MAX:
+            pwm = PWM_MAX
+    elif power > 0:
+        # Forward mode for the left motor
+        io.output(leftMotor_DIR_pin, True)
+        pwm = int(PWM_MAX * power)
+        if pwm > PWM_MAX:
+            pwm = PWM_MAX
+    else:
+        # Stopp mode for the left motor
+        io.output(leftMotor_DIR_pin, False)
+        pwm = 0
+#   print "SetMotorLeft", pwm
+    leftMotorPower = pwm
+    leftMotorPWM.ChangeDutyCycle(pwm)
+          def setMotorRight(power):
+          # SetMotorRight(power)
+          # Sets the drive level for the right motor, from +1 (max) to -1 (min).
+          # This is a short explanation for a better understanding:
+          # SetMotorRight(0)     -> right motor is stopped
+          # SetMotorRight(0.75)  -> right motor moving forward at 75% power
+          # SetMotorRight(-0.5)  -> right motor moving reverse at 50% power
+          # SetMotorRight(1)     -> right motor moving forward at 100% power
+              if power < 0:
+                  # Reverse mode for the right motor
+                  io.output(rightMotor_DIR_pin, True)
+                  pwm = -int(PWM_MAX * power)
+                  if pwm > PWM_MAX:
+                      pwm = PWM_MAX
+              elif power > 0:
+                  # Forward mode for the right motor
+                  io.output(rightMotor_DIR_pin, False)
+                  pwm = int(PWM_MAX * power)
+                  if pwm > PWM_MAX:
+                      pwm = PWM_MAX
+              else:
+                  # Stopp mode for the right motor
+                  io.output(rightMotor_DIR_pin, False)
+                  pwm = 0
+          #   print "SetMotorRight", pwm
+              rightMotorPower = pwm
+              rightMotorPWM.ChangeDutyCycle(pwm)
+          def exit():
+          # Program will clean up all GPIO settings and terminates
+              io.output(leftMotor_DIR_pin, False)
+              io.output(rightMotor_DIR_pin, False)
+              io.cleanup()
