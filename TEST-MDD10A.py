@@ -14,14 +14,15 @@ print("x: exit")
 # The catch method can determine which key has been pressed
 # by the user on the keyboard.
 def getch():
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        ch = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
+    # fd = sys.stdin.fileno()
+    # old_settings = termios.tcgetattr(fd)
+    # try:
+    # tty.setraw(sys.stdin.fileno())
+    # ch = sys.stdin.read(1)
+    # finally:
+    # termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    # return ch
+    return input()
 # Infinite loop
 # The loop will not end until the user presses the
 # exit key 'X' or the program crashes...
