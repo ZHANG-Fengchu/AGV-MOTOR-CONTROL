@@ -3,6 +3,8 @@
 # The pins configuration for Model B Revision 1.0
 import sys, tty, termios, os
 import MDD10A as HBridge
+import time
+import RPi.GPIO as GPIO
 speedleft = 0.0
 speedright = 0.0
 # Instructions for when the user has an interface
