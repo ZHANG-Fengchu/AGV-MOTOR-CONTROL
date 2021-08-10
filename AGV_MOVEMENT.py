@@ -6,9 +6,26 @@
 import sys, tty, termios, os
 import MDD10A as HBridge
 import time
+from time import sleep
 import RPi.GPIO as GPIO
 import math
-import keyboard
+from signal import signal, SIGTERM, SIGHUP, pause
+from gpiozero import DistanceSensor
+
+# Set up sensors
+## IR sensor
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(25, GPIO.IN)
+
+## US sensor
+us_sensor = DistanceSensor(echo=20, trigger=21)
+def safe_exit(signum, frame):
+    exit(1)
+
+us_threshold = 0.2
+    
+signal(SIGTERM, safe_exit)
+signal(SIGHUP, safe_exit)
 
 # Initialize values
 max_omega_w=18.43
@@ -22,9 +39,9 @@ duty_cycle=0.1
 omega_w=max_omega_w*duty_cycle
 theta_v_deg=360
 theta_v_rad=theta_v_deg*(math.pi)/180
-rotatetime=float((theta_v_rad/omega_w)*(rv/rw))
-dis=1
-movetime=float(dis/(omega_w*rw))
+rotatetime=int((theta_v_rad/omega_w)*(rv/rw))
+dis=2
+movetime=int(dis/(omega_w*rw))
 
 # User raw input (for now) to determine how the user wishes for the robot to move.
 def getch():
@@ -57,6 +74,7 @@ def printscreen():
     print("estimated rotation time based on current parameters:",rotatetime,"seconds")
     print("desired straight movement distance:",dis,"meters")
     print("estimated straight movement time based on current parameters:",movetime,"seconds")
+    print("current ultrasound sensor distance threshold:",us_threshold,"meters")
     
 # Welcome text
 print("Welcome, press one of the following characters.")
@@ -85,10 +103,12 @@ while True:
         print("Please enter desired vehicle rotation in degrees, for double wheel turning.")
         theta_v_deg=float(input())
         theta_v_rad=theta_v_deg*(math.pi)/180
-        rotatetime=float((theta_v_rad/omega_w)*(rv/rw))
+        rotatetime=int((theta_v_rad/omega_w)*(rv/rw))
         print("Please enter desired movement distance in meters, for straight forward and backward movement only.")
         dis=float(input())
-        movetime=float(dis/(omega_w*rw))
+        movetime=int(dis/(omega_w*rw))
+        print("Decide Ultrasound sensor distance threshold.")
+        us_threshold=float(input())
         printscreen()
     
     # The vehicle will move forwards to the user desired distance when f is pressed.
@@ -98,13 +118,25 @@ while True:
         print("========== Current motor status ==========")
         print("current left motor duty cycle:",speedleft)
         print("current right motor duty cycle:",speedright)
-        print(movetime,"seconds")
+        print("Will take:",movetime,"seconds")
         print("Press ctrl-c to terminate movement.")
-        t_end = time.time() + movetime
-        try: 
-            while(time.time()<t_end):
-                HBridge.setMotorLeft(speedleft)
-                HBridge.setMotorRight(speedright)
+        time_at_start = time.time()
+        time_paused = 0
+        time_elapsed = int((time.time() - time_at_start)) 
+        try:     
+            while(time_elapsed < movetime):
+                ir_sensor=GPIO.input(25)
+                time_elapsed = int((time.time() - time_at_start)) - time_paused
+                if ir_sensor==1 and us_sensor.value>us_threshold:
+                    HBridge.setMotorLeft(speedleft)
+                    HBridge.setMotorRight(speedright)
+                    print("Time elapsed:",time_elapsed,"seconds; No obstacles; US sensor value:",us_sensor.value,"meters"+ "\r", end="")
+                elif ir_sensor==0 or us_sensor.value<us_threshold:
+                    HBridge.setMotorLeft(0)
+                    HBridge.setMotorRight(0)
+                    time.sleep(1)
+                    time_paused = time_paused + 1
+                    print("Time elapsed:",time_elapsed,"seconds; Yes obstacle; US sensor value:",us_sensor.value,"meters; Time paused:", time_paused, "seconds" + "\r", end="")
         except KeyboardInterrupt:
             pass
         char = "q"
@@ -117,13 +149,25 @@ while True:
         print("========== Current motor status ==========")
         print("current left motor duty cycle:",speedleft)
         print("current right motor duty cycle:",speedright)
-        print(movetime,"seconds")
+        print("Will take:",movetime,"seconds")
         print("Press ctrl-c to terminate movement.")
-        t_end = time.time() + movetime
-        try: 
-            while(time.time()<t_end):
-                HBridge.setMotorLeft(speedleft)
-                HBridge.setMotorRight(speedright)
+        time_at_start = time.time()
+        time_paused = 0
+        time_elapsed = int((time.time() - time_at_start))
+        try:
+            while(time_elapsed < movetime):
+                ir_sensor=GPIO.input(25)
+                time_elapsed = int((time.time() - time_at_start)) - time_paused
+                if ir_sensor==1 and us_sensor.value>us_threshold:
+                    HBridge.setMotorLeft(speedleft)
+                    HBridge.setMotorRight(speedright)
+                    print("Time elapsed:",time_elapsed,"seconds; No obstacles; US sensor value:",us_sensor.value,"meters"+ "\r", end="")
+                elif ir_sensor==0 or us_sensor.value<us_threshold:
+                    HBridge.setMotorLeft(0)
+                    HBridge.setMotorRight(0)
+                    time.sleep(1)
+                    time_paused = time_paused + 1
+                    print("Time elapsed:",time_elapsed,"seconds; Yes obstacle; US sensor value:",us_sensor.value,"meters; Time paused:", time_paused, "seconds" + "\r", end="")
         except KeyboardInterrupt:
             pass
         char = "q"
@@ -136,13 +180,25 @@ while True:
         print("========== Current motor status ==========")
         print("current left motor duty cycle:",speedleft)
         print("current right motor duty cycle:",speedright)
-        print(rotatetime,"seconds")
+        print("Will take:",rotatetime,"seconds")
         print("Press ctrl-c to terminate movement.")
-        t_end = time.time() + rotatetime
-        try: 
-            while(time.time()<t_end):
-                HBridge.setMotorLeft(speedleft)
-                HBridge.setMotorRight(speedright)
+        time_at_start = time.time()
+        time_paused = 0
+        time_elapsed = int((time.time() - time_at_start))
+        try:
+            while(time_elapsed < rotatetime):
+                ir_sensor=GPIO.input(25)
+                time_elapsed = int((time.time() - time_at_start)) - time_paused
+                if ir_sensor==1 and us_sensor.value>us_threshold:
+                    HBridge.setMotorLeft(speedleft)
+                    HBridge.setMotorRight(speedright)
+                    print("Time elapsed:",time_elapsed,"seconds; No obstacles; US sensor value:",us_sensor.value,"meters"+ "\r", end="")
+                elif ir_sensor==0 or us_sensor.value<us_threshold:
+                    HBridge.setMotorLeft(0)
+                    HBridge.setMotorRight(0)
+                    time.sleep(1)
+                    time_paused = time_paused + 1
+                    print("Time elapsed:",time_elapsed,"seconds; Yes obstacle; US sensor value:",us_sensor.value,"meters; Time paused:", time_paused, "seconds" + "\r", end="")
         except KeyboardInterrupt:
             pass
         char = "q"
@@ -155,13 +211,25 @@ while True:
         print("========== Current motor status ==========")
         print("current left motor duty cycle:",speedleft)
         print("current right motor duty cycle:",speedright)
-        print(rotatetime,"seconds")
+        print("Will take:",rotatetime,"seconds")
         print("Press ctrl-c to terminate movement.")
-        t_end = time.time() + rotatetime
-        try: 
-            while(time.time()<t_end):
-                HBridge.setMotorLeft(speedleft)
-                HBridge.setMotorRight(speedright)
+        time_at_start = time.time()
+        time_paused = 0
+        time_elapsed = int((time.time() - time_at_start))
+        try:
+            while(time_elapsed < rotatetime):
+                ir_sensor=GPIO.input(25)
+                time_elapsed = int((time.time() - time_at_start)) - time_paused
+                if ir_sensor==1 and us_sensor.value>us_threshold:
+                    HBridge.setMotorLeft(speedleft)
+                    HBridge.setMotorRight(speedright)
+                    print("Time elapsed:",time_elapsed,"seconds; No obstacles; US sensor value:",us_sensor.value,"meters"+ "\r", end="")
+                elif ir_sensor==0 or us_sensor.value<us_threshold:
+                    HBridge.setMotorLeft(0)
+                    HBridge.setMotorRight(0)
+                    time.sleep(1)
+                    time_paused = time_paused + 1
+                    print("Time elapsed:",time_elapsed,"seconds; Yes obstacle; US sensor value:",us_sensor.value,"meters; Time paused:", time_paused, "seconds" + "\r", end="")
         except KeyboardInterrupt:
             pass
         char = "q"
