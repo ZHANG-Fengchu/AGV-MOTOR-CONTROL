@@ -35,8 +35,8 @@ rightMotor_PWM_pin = 18
 io.setup(leftMotor_PWM_pin, io.OUT)
 io.setup(rightMotor_PWM_pin, io.OUT)
 # MAX Frequency 20 Hz
-leftMotorPWM = io.PWM(leftMotor_PWM_pin,20)
-rightMotorPWM = io.PWM(rightMotor_PWM_pin,20)
+leftMotorPWM = io.PWM(leftMotor_PWM_pin,1000)
+rightMotorPWM = io.PWM(rightMotor_PWM_pin,1000)
 leftMotorPWM.start(0)
 leftMotorPWM.ChangeDutyCycle(0)
 rightMotorPWM.start(0)
